@@ -16,9 +16,6 @@ public class UserMapperImpl implements UserMapper {
 
     @Override
     public User toUser(User user, UserRequest request) {
-        if (user == null || request == null) {
-            return null;
-        }
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(request.getPassword());
