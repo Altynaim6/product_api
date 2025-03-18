@@ -3,26 +3,26 @@ package com.example.product_api.controller;
 import com.example.product_api.model.dto.category.CategoryRequest;
 import com.example.product_api.model.dto.category.CategoryResponse;
 import com.example.product_api.service.CategoryService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.util.Arrays;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-public class CategoryControllerTest {
+@ExtendWith(MockitoExtension.class)
+class CategoryControllerTest {
 
     private MockMvc mockMvc;
 
@@ -32,95 +32,82 @@ public class CategoryControllerTest {
     @InjectMocks
     private CategoryController categoryController;
 
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private CategoryRequest categoryRequest;
+    private CategoryResponse categoryResponse;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         MockitoAnnotations.openMocks(this);
         mockMvc = MockMvcBuilders.standaloneSetup(categoryController).build();
-        objectMapper = new ObjectMapper();
+
+        categoryRequest = new CategoryRequest();
+        categoryRequest.setName("Electronics");
+        categoryRequest.setDescription("All electronic products");
+
+        categoryResponse = new CategoryResponse();
+        categoryResponse.setId(1L);
+        categoryResponse.setName("Electronics");
+        categoryResponse.setDescription("All electronic products");
     }
 
     @Test
-    public void testAddCategory() throws Exception {
-        // Arrange
-        CategoryRequest request = new CategoryRequest();
-        request.setName("Electronics");
+    void add_ShouldReturnCategoryResponse() throws Exception {
+        when(categoryService.add(any(CategoryRequest.class))).thenReturn(categoryResponse);
 
-        CategoryResponse response = new CategoryResponse();
-        response.setId(1L);
-        response.setName("Electronics");
-
-        when(categoryService.add(any(CategoryRequest.class))).thenReturn(response);
-
-        // Act & Assert
         mockMvc.perform(post("/categories")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(categoryRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.name").value("Electronics"));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Electronics"))
+                .andExpect(jsonPath("$.description").value("All electronic products"));
+
+        verify(categoryService).add(any(CategoryRequest.class));
     }
 
     @Test
-    public void testUpdateCategory() throws Exception {
-        // Arrange
-        CategoryRequest request = new CategoryRequest();
-        request.setName("Updated Electronics");
+    void update_ShouldReturnUpdatedCategoryResponse() throws Exception {
+        when(categoryService.update(any(CategoryRequest.class), eq(1L))).thenReturn(categoryResponse);
 
-        CategoryResponse response = new CategoryResponse();
-        response.setId(1L);
-        response.setName("Updated Electronics");
-
-        when(categoryService.update(any(CategoryRequest.class), any(Long.class))).thenReturn(response);
-
-        // Act & Assert
         mockMvc.perform(put("/categories/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(categoryRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.name").value("Updated Electronics"));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Electronics"))
+                .andExpect(jsonPath("$.description").value("All electronic products"));
+
+        verify(categoryService).update(any(CategoryRequest.class), eq(1L));
     }
 
     @Test
-    public void testGetCategoryById() throws Exception {
-        // Arrange
-        CategoryResponse response = new CategoryResponse();
-        response.setId(1L);
-        response.setName("Electronics");
+    void getById_ShouldReturnCategoryResponse() throws Exception {
+        when(categoryService.getById(1L)).thenReturn(categoryResponse);
 
-        when(categoryService.getById(1L)).thenReturn(response);
-
-        // Act & Assert
-        mockMvc.perform(get("/categories/1"))
+        mockMvc.perform(get("/categories/1")
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1L))
-                .andExpect(jsonPath("$.name").value("Electronics"));
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.name").value("Electronics"))
+                .andExpect(jsonPath("$.description").value("All electronic products"));
+
+        verify(categoryService).getById(1L);
     }
 
     @Test
-    public void testGetAllCategories() throws Exception {
-        // Arrange
-        CategoryResponse response1 = new CategoryResponse();
-        response1.setId(1L);
-        response1.setName("Electronics");
+    void all_ShouldReturnCategoryList() throws Exception {
+        when(categoryService.all()).thenReturn(List.of(categoryResponse));
 
-        CategoryResponse response2 = new CategoryResponse();
-        response2.setId(2L);
-        response2.setName("Clothing");
-
-        List<CategoryResponse> categoryList = Arrays.asList(response1, response2);
-
-        when(categoryService.all()).thenReturn(categoryList);
-
-        // Act & Assert
-        mockMvc.perform(get("/categories"))
+        mockMvc.perform(get("/categories")
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.size()").value(2))
-                .andExpect(jsonPath("$[0].id").value(1L))
+                .andExpect(jsonPath("$.size()").value(1))
+                .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].name").value("Electronics"))
-                .andExpect(jsonPath("$[1].id").value(2L))
-                .andExpect(jsonPath("$[1].name").value("Clothing"));
+                .andExpect(jsonPath("$[0].description").value("All electronic products"));
+
+        verify(categoryService).all();
     }
 }
