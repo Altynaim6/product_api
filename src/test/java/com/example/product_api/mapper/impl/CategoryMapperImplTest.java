@@ -1,8 +1,8 @@
 package com.example.product_api.mapper.impl;
 
+import com.example.product_api.model.domain.Category;
 import com.example.product_api.model.dto.category.CategoryRequest;
 import com.example.product_api.model.dto.category.CategoryResponse;
-import com.example.product_api.model.domain.Category;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

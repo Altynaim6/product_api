@@ -4,6 +4,7 @@ import com.example.product_api.model.dto.user.UserRequest;
 import com.example.product_api.model.dto.user.UserResponse;
 import com.example.product_api.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,6 +12,7 @@ import java.util.List;
 @RestController
 @AllArgsConstructor
 @RequestMapping("/users")
+@Validated
 public class UserController {
     private final UserService userService;
 
