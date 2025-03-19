@@ -27,7 +27,7 @@ class UserMapperImplTest {
         request.setName("John Doe");
         request.setEmail("john.doe@example.com");
         request.setPassword("securepassword");
-        request.setRole("ADMIN");
+        request.setRole("CUSTOMER");
 
         User mappedUser = userMapper.toUser(user, request);
 
@@ -35,7 +35,7 @@ class UserMapperImplTest {
         assertEquals("John Doe", mappedUser.getName());
         assertEquals("john.doe@example.com", mappedUser.getEmail());
         assertEquals("securepassword", mappedUser.getPassword());
-        assertEquals(Role.SELLER, mappedUser.getRole());
+        assertEquals(Role.CUSTOMER, mappedUser.getRole());
     }
 
     @Test
@@ -68,7 +68,7 @@ class UserMapperImplTest {
         assertEquals(1L, response.getId());
         assertEquals("Alice Smith", response.getName());
         assertEquals("alice.smith@example.com", response.getEmail());
-        assertEquals("USER", response.getRole());
+        assertEquals("CUSTOMER", response.getRole().toString());
     }
 
     @Test
@@ -98,12 +98,12 @@ class UserMapperImplTest {
         assertEquals(1L, responses.get(0).getId());
         assertEquals("Alice", responses.get(0).getName());
         assertEquals("alice@example.com", responses.get(0).getEmail());
-        assertEquals("USER", responses.get(0).getRole());
+        assertEquals("CUSTOMER", responses.get(0).getRole().toString());
 
         assertEquals(2L, responses.get(1).getId());
         assertEquals("Bob", responses.get(1).getName());
         assertEquals("bob@example.com", responses.get(1).getEmail());
-        assertEquals("ADMIN", responses.get(1).getRole());
+        assertEquals("SELLER", responses.get(1).getRole().toString());
     }
 
     @Test
