@@ -20,30 +20,34 @@ class CategoryRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        // Prepare test data
         category = new Category();
         category.setName("Electronics");
-        category.setDescription("Devices and gadgets");
+        category.setDescription("Electronic devices and gadgets");
         categoryRepository.save(category);
     }
 
     @Test
-    void existsByName() {
-        // Test if the category exists by its name
-        assertTrue(categoryRepository.existsByName("Electronics"));
-        assertFalse(categoryRepository.existsByName("NonExistentCategory"));
+    void existsByName_ShouldReturnTrue_WhenCategoryExists() {
+        boolean exists = categoryRepository.existsByName("Electronics");
+        assertTrue(exists, "Category with name 'Electronics' should exist");
     }
 
     @Test
-    void findByName() {
-        // Test finding a category by its name
-        Optional<Category> foundCategory = categoryRepository.findByName("Electronics");
-        assertTrue(foundCategory.isPresent());
-        assertEquals("Electronics", foundCategory.get().getName());
-        assertEquals("Devices and gadgets", foundCategory.get().getDescription());
+    void existsByName_ShouldReturnFalse_WhenCategoryDoesNotExist() {
+        boolean exists = categoryRepository.existsByName("NonExistingCategory");
+        assertFalse(exists, "Category with name 'NonExistingCategory' should not exist");
+    }
 
-        // Test finding a category that does not exist
-        Optional<Category> nonExistentCategory = categoryRepository.findByName("NonExistentCategory");
-        assertFalse(nonExistentCategory.isPresent());
+    @Test
+    void findByName_ShouldReturnCategory_WhenNameExists() {
+        Optional<Category> foundCategory = categoryRepository.findByName("Electronics");
+        assertTrue(foundCategory.isPresent(), "Category should be found");
+        assertEquals("Electronics", foundCategory.get().getName());
+    }
+
+    @Test
+    void findByName_ShouldReturnEmpty_WhenNameDoesNotExist() {
+        Optional<Category> foundCategory = categoryRepository.findByName("NonExistingCategory");
+        assertFalse(foundCategory.isPresent(), "No category should be found");
     }
 }

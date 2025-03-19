@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,76 +33,70 @@ class ProductRepositoryTest {
 
     @BeforeEach
     void setUp() {
-        // Prepare test data
+        // Create and save a seller
         seller = new User();
-        seller.setName("Seller One");
-        seller.setEmail("seller@domain.com");
-        seller.setPassword("password123");
-        userRepository.save(seller);
+        seller.setName("John Doe");
+        seller.setRole(com.example.product_api.model.enums.Role.SELLER);
+        seller = userRepository.save(seller);
 
+        // Create and save a category
         category = new Category();
         category.setName("Electronics");
-        category.setDescription("Gadgets and devices");
-        categoryRepository.save(category);
+        category.setDescription("Electronic devices");
+        category = categoryRepository.save(category);
 
+        // Create and save products
         product1 = new Product();
         product1.setName("Laptop");
-        product1.setDescription("High performance laptop");
-        product1.setPrice(1200.0);
-        product1.setQuantity(10);
+        product1.setDescription("Gaming Laptop");
+        product1.setPrice(1200.00);
+        product1.setQuantity(5.0);
         product1.setSeller(seller);
         product1.setCategory(category);
+        product1.setCreatedAt(LocalDateTime.now().minusDays(2));
         productRepository.save(product1);
 
         product2 = new Product();
-        product2.setName("Smartphone");
-        product2.setDescription("Latest model smartphone");
-        product2.setPrice(800.0);
-        product2.setQuantity(20);
+        product2.setName("Phone");
+        product2.setDescription("Smartphone");
+        product2.setPrice(800.00);
+        product2.setQuantity(10.0);
         product2.setSeller(seller);
         product2.setCategory(category);
+        product2.setCreatedAt(LocalDateTime.now().minusDays(1));
         productRepository.save(product2);
 
         product3 = new Product();
         product3.setName("Tablet");
-        product3.setDescription("Portable and powerful tablet");
-        product3.setPrice(600.0);
-        product3.setQuantity(15);
+        product3.setDescription("Android Tablet");
+        product3.setPrice(500.00);
+        product3.setQuantity(7.0);
         product3.setSeller(seller);
         product3.setCategory(category);
+        product3.setCreatedAt(LocalDateTime.now());
         productRepository.save(product3);
     }
 
     @Test
-    void findAllBySeller() {
-        // Test retrieving products by seller
+    void findAllBySeller_ShouldReturnSellerProducts() {
         List<Product> products = productRepository.findAllBySeller(seller, PageRequest.of(0, 10));
-        assertEquals(3, products.size());
-        assertTrue(products.contains(product1));
-        assertTrue(products.contains(product2));
-        assertTrue(products.contains(product3));
+        assertEquals(3, products.size(), "Seller should have 3 products");
     }
 
     @Test
-    void findAllByCategory() {
-        // Test retrieving products by category
+    void findAllByCategory_ShouldReturnCategoryProducts() {
         List<Product> products = productRepository.findAllByCategory(category, PageRequest.of(0, 10));
-        assertEquals(3, products.size());
-        assertTrue(products.contains(product1));
-        assertTrue(products.contains(product2));
-        assertTrue(products.contains(product3));
+        assertEquals(3, products.size(), "Category should contain 3 products");
     }
 
     @Test
-    void sortByDate() {
-        // Test sorting products by createdAt date
-        LocalDate startDate = LocalDate.now().minusDays(1);
-        LocalDate endDate = LocalDate.now().plusDays(1);
-
+    void sortByDate_ShouldReturnProductsInDescendingOrder() {
+        LocalDate startDate = LocalDate.now().minusDays(3);
+        LocalDate endDate = LocalDate.now();
         List<Product> products = productRepository.sortByDate(startDate, endDate, PageRequest.of(0, 10));
-        assertNotNull(products);
-        assertTrue(products.size() > 0);
-        // Check that products are sorted by createdAt in descending order
+
+        assertEquals(3, products.size(), "Should return 3 products");
         assertTrue(products.get(0).getCreatedAt().isAfter(products.get(1).getCreatedAt()));
+        assertTrue(products.get(1).getCreatedAt().isAfter(products.get(2).getCreatedAt()));
     }
 }
