@@ -48,7 +48,24 @@
             return new AuthResponse(accessToken, refreshToken);
         }
 
-
+        @Override
+        public AuthResponse register(RegisterRequest request) {
+            // 1) Check if email already exists
+            if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+                throw new CustomException("User with this email already exists", HttpStatus.CONFLICT);
+            }
+            // 2) Create and save user
+            User user = new User();
+            user.setName(request.getName());
+            user.setEmail(request.getEmail());
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+            user.setRole(Role.CUSTOMER);
+            User saved = userRepository.save(user);
+            // 3) Generate tokens
+            String accessToken = jwtService.generateToken(saved);
+            String refreshToken = refreshTokenService.createAndSaveRefreshToken(saved, refreshTokenDurationMs);
+            return new AuthResponse(accessToken, refreshToken);
+        }
 
         public AuthResponse refreshAccessToken(String refreshToken) {
             User user = refreshTokenService.verifyExpirationAndGetUser(refreshToken);
