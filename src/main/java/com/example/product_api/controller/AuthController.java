@@ -1,144 +1,135 @@
 package com.example.product_api.controller;
 
 import com.example.product_api.exception.CustomException;
+import com.example.product_api.model.domain.RefreshToken;
 import com.example.product_api.model.domain.User;
 import com.example.product_api.model.domain.VerificationToken;
 import com.example.product_api.model.dto.auth.AuthRequest;
 import com.example.product_api.model.dto.auth.AuthResponse;
-import com.example.product_api.model.dto.auth.RefreshTokenRequest;
-import com.example.product_api.model.dto.auth.RegisterRequest;
+import com.example.product_api.model.dto.user.UserRequest;
+import com.example.product_api.model.enums.Role;
 import com.example.product_api.repository.UserRepository;
-import com.example.product_api.service.impl.AuthServiceImpl;
+import com.example.product_api.security.jwt.JwtTokenProvider;
+import com.example.product_api.service.EmailSenderService;
+import com.example.product_api.service.RefreshTokenService;
 import com.example.product_api.service.VerificationTokenService;
-
-import io.swagger.v3.oas.annotations.Operation;                             // :contentReference[oaicite:0]{index=0}
-import io.swagger.v3.oas.annotations.tags.Tag;                                // :contentReference[oaicite:1]{index=1}
-import io.swagger.v3.oas.annotations.parameters.RequestBody;                  // :contentReference[oaicite:2]{index=2}
-import io.swagger.v3.oas.annotations.responses.ApiResponse;                  // :contentReference[oaicite:3]{index=3}
-import io.swagger.v3.oas.annotations.media.Content;                          // :contentReference[oaicite:4]{index=4}
-import io.swagger.v3.oas.annotations.media.Schema;                           // :contentReference[oaicite:5]{index=5}
-
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Validated
-@Tag(name = "Authentication", description = "Login, registration, token, and email-verify endpoints")  // :contentReference[oaicite:6]{index=6}
 public class AuthController {
 
-    private final AuthServiceImpl authService;
-    private final VerificationTokenService verificationTokenService;
+    private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final RefreshTokenService refreshTokenService;
+    private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordEncoder passwordEncoder;
+    private final VerificationTokenService verificationTokenService;
+    private final EmailSenderService emailSenderService;
 
-    @Operation(
-            summary = "User login",
-            description = "Authenticate and return access & refresh JWTs",
-            requestBody = @RequestBody(
-                    description = "User credentials",
-                    required    = true,
-                    content     = @Content(
-                            mediaType = "application/json",
-                            schema    = @Schema(implementation = AuthRequest.class)
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Login successful",
-                            content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Invalid credentials")
-            }
-    )
-    @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@Valid @RequestBody AuthRequest request) {
-        return ResponseEntity.ok(authService.login(request));
-    }
-
-    @Operation(
-            summary = "User registration",
-            description = "Register and return access & refresh JWTs",
-            requestBody = @RequestBody(
-                    description = "Registration details",
-                    required    = true,
-                    content     = @Content(
-                            mediaType = "application/json",
-                            schema    = @Schema(implementation = RegisterRequest.class)
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Registration successful",
-                            content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-                    @ApiResponse(responseCode = "409", description = "Email already exists")
-            }
-    )
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ResponseEntity.ok(authService.register(request));
+    public ResponseEntity<String> register(@RequestBody @Valid UserRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new CustomException("Email is already registered", HttpStatus.BAD_REQUEST);
+        }
+
+        User user = new User();
+        user.setName(request.getName());
+        user.setEmail(request.getEmail());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setRole(Role.CUSTOMER);
+        user.setEnabled(false);
+        User savedUser = userRepository.save(user);
+
+        VerificationToken token = verificationTokenService.createToken(savedUser);
+        String link = "http://localhost:8080/auth/verify?token=" + token.getToken();
+        emailSenderService.sendVerificationEmail(savedUser.getEmail(), link);
+
+        return ResponseEntity.ok("Registration successful. Please check your email to verify your account.");
     }
 
-    @Operation(
-            summary = "Refresh access token",
-            description = "Issue a new access token using a valid refresh token",
-            requestBody = @RequestBody(
-                    description = "Refresh token",
-                    required    = true,
-                    content     = @Content(
-                            mediaType = "application/json",
-                            schema    = @Schema(implementation = RefreshTokenRequest.class)
+    @PostMapping("/login")
+    public ResponseEntity<AuthResponse> login(@RequestBody @Valid AuthRequest request) {
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            request.getEmail(),
+                            request.getPassword()
                     )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Token refreshed",
-                            content = @Content(schema = @Schema(implementation = AuthResponse.class))),
-                    @ApiResponse(responseCode = "401", description = "Invalid or expired refresh token")
+            );
+
+            User user = (User) authentication.getPrincipal();
+
+            if (!user.isEnabled()) {
+                throw new CustomException("Please verify your email before logging in", HttpStatus.UNAUTHORIZED);
             }
-    )
-    @PostMapping("/refresh-token")
-    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
-        return ResponseEntity.ok(authService.refreshAccessToken(request.getRefreshToken()));
+
+            String accessToken = jwtTokenProvider.generateAccessToken(
+                    user.getEmail(),
+                    user.getName(),
+                    user.getRole().name()
+            );
+
+            RefreshToken refreshToken = refreshTokenService.getOrCreateRefreshToken(user);
+
+            return ResponseEntity.ok(new AuthResponse(accessToken, refreshToken.getToken()));
+
+        } catch (AuthenticationException ex) {
+            throw new CustomException("Invalid credentials", HttpStatus.UNAUTHORIZED);
+        }
     }
 
-    @Operation(
-            summary = "Logout user",
-            description = "Invalidate the given refresh token",
-            requestBody = @RequestBody(
-                    description = "Refresh token to invalidate",
-                    required    = true,
-                    content     = @Content(
-                            mediaType = "application/json",
-                            schema    = @Schema(implementation = RefreshTokenRequest.class)
-                    )
-            ),
-            responses = {
-                    @ApiResponse(responseCode = "204", description = "Logged out successfully")
-            }
-    )
-    @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
-        authService.logout(request.getRefreshToken());
-        return ResponseEntity.noContent().build();
-    }
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refreshToken(@RequestBody Map<String, String> request) {
+        String refreshTokenStr = request.get("refresh_token");
+        if (refreshTokenStr == null || refreshTokenStr.isBlank()) {
+            throw new CustomException("Refresh token is missing", HttpStatus.BAD_REQUEST);
+        }
 
-    @Operation(
-            summary = "Verify email",
-            description = "Activate account using a verification token",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Email verified"),
-                    @ApiResponse(responseCode = "400", description = "Invalid or expired token")
-            }
-    )
-    @GetMapping("/verify")
-    public ResponseEntity<String> verifyAccount(@RequestParam("token") String tokenStr) {
-        VerificationToken token = verificationTokenService.findByToken(tokenStr)
-                .orElseThrow(() -> new CustomException("Invalid verification token", HttpStatus.BAD_REQUEST));
+        RefreshToken token = refreshTokenService.findByToken(refreshTokenStr)
+                .map(refreshTokenService::verifyExpiration)
+                .orElseThrow(() -> new CustomException("Refresh token not found or expired", HttpStatus.UNAUTHORIZED));
+
         User user = token.getUser();
+        String newAccessToken = jwtTokenProvider.generateAccessToken(
+                user.getEmail(),
+                user.getName(),
+                user.getRole().name()
+        );
+
+        return ResponseEntity.ok(new AuthResponse(newAccessToken, token.getToken()));
+    }
+
+    @GetMapping("/verify")
+    public ResponseEntity<Void> verifyAccount(@RequestParam("token") String token) {
+        VerificationToken verificationToken = verificationTokenService.findByToken(token)
+                .orElseThrow(() -> new CustomException("Invalid verification token", HttpStatus.BAD_REQUEST));
+
+        if (verificationToken.getExpiryDate().isBefore(Instant.now())) {
+            throw new CustomException("Verification token has expired", HttpStatus.BAD_REQUEST);
+        }
+
+        User user = verificationToken.getUser();
         user.setEnabled(true);
         userRepository.save(user);
+
         verificationTokenService.deleteByUser(user);
-        return ResponseEntity.ok("Email verified successfully!");
+
+        return ResponseEntity.status(302)
+                .header("Location", "/login.html")
+                .build();
     }
 }

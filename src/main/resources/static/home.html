@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home | Product API</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background-color: #f4f4f4;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+    }
+    .info {
+      margin-top: 20px;
+      font-size: 14px;
+      word-break: break-word;
+      background: #eee;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px;
+      border: none;
+      font-size: 16px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .logout { background-color: #e53935; color: white; }
+    .logout:hover { background-color: #d32f2f; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Welcome</h2>
+
+  <div class="info" id="userInfo"></div>
+  <div class="info" id="tokens"></div>
+
+  <button class="logout" onclick="logout()">Logout</button>
+</div>
+
+<script>
+  function parseJwt(token) {
+    try {
+      const payload = token.split('.')[1];
+      const decoded = atob(payload);
+      return JSON.parse(decoded);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  const accessToken = localStorage.getItem("accessToken");
+  const refreshToken = localStorage.getItem("refreshToken");
+
+  if (!accessToken || !refreshToken) {
+    window.location.href = "/login.html";  // Redirect if not logged in
+  } else {
+    const payload = parseJwt(accessToken);
+    const email = payload?.sub || "Unknown user";
+
+    document.getElementById("userInfo").innerHTML = `<strong>Email:</strong> ${email}`;
+    document.getElementById("tokens").innerHTML = `
+      <strong>Access Token:</strong><br>${accessToken}<br><br>
+      <strong>Refresh Token:</strong><br>${refreshToken}
+    `;
+  }
+
+  function logout() {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    window.location.href = "/login.html";
+  }
+</script>
+</body>
+</html>
