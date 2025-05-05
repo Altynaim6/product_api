@@ -77,20 +77,19 @@ public class UserServiceImpl implements UserService {
         return userRepository.findByEmail(email);
     }
 
-    // Включить 2FA
-    public void enable2FA(String email, String secretKey) {
+    @Override
+    public void enable2FA(String email, String secret) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
-        user.setTwoFaSecret(secretKey);
+        user.setSecret2FA(secret);
         userRepository.save(user);
     }
 
-    // Проверка кода
+    @Override
     public boolean verify2FACode(String email, int code) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new CustomException("User not found", HttpStatus.NOT_FOUND));
-        return twoFactorAuthService.verifyCode(user.getTwoFaSecret(), code);
+        return twoFactorAuthService.verifyCode(user.getSecret2FA(), code);
     }
-
 
 }

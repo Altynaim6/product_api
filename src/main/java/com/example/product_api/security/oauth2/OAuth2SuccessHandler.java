@@ -46,7 +46,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             return;
         }
 
-        // Create new user if not exists
         User user = userRepository.findByEmail(email).orElseGet(() -> {
             User newUser = new User();
             newUser.setEmail(email);
@@ -57,7 +56,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
             return userRepository.save(newUser);
         });
 
-        // Generate tokens
         String accessToken = jwtTokenProvider.generateAccessToken(
                 user.getEmail(),
                 user.getName(),
@@ -65,7 +63,6 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         );
         RefreshToken refreshToken = refreshTokenService.getOrCreateRefreshToken(user);
 
-        // Redirect with tokens
         String redirectUrl = String.format("/home.html?accessToken=%s&refreshToken=%s",
                 URLEncoder.encode(accessToken, StandardCharsets.UTF_8),
                 URLEncoder.encode(refreshToken.getToken(), StandardCharsets.UTF_8)

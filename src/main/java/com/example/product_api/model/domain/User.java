@@ -37,8 +37,8 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "two_fa_secret")
-    private String twoFaSecret;
+    @Column(name = "secret_2fa")
+    private String secret2FA;
 
     @JsonIgnore
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -46,6 +46,7 @@ public class User implements UserDetails {
     @EqualsAndHashCode.Exclude
     private RefreshToken refreshToken;
 
+    // UserDetails interface methods
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.name()));

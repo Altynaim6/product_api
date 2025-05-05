@@ -1,28 +1,29 @@
 package com.example.product_api.model.domain;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 
 import java.time.Instant;
 
 @Entity
-@Table(name = "refresh_tokens", uniqueConstraints = @UniqueConstraint(columnNames = "user_id"))
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@ToString(exclude = "user")
-@EqualsAndHashCode(exclude = "user")
+@Data
+@Table(name = "refresh_tokens", uniqueConstraints = {
+        @UniqueConstraint(columnNames = "user_id")
+})
 public class RefreshToken {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JsonBackReference
+    @JsonIgnore
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User user;
 
     @Column(nullable = false, unique = true)
