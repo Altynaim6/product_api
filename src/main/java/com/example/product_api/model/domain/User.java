@@ -1,9 +1,11 @@
 package com.example.product_api.model.domain;
 
 import com.example.product_api.model.enums.Role;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -12,13 +14,8 @@ import java.util.Collection;
 import java.util.Collections;
 
 @Entity
+@Data
 @Table(name = "users_tb")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@ToString(exclude = "refreshToken")
-@EqualsAndHashCode(exclude = "refreshToken")
 public class User implements UserDetails {
 
     @Id
@@ -40,11 +37,17 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String name;
 
-    @JsonManagedReference
+    @Column(name = "two_fa_secret")
+    private String twoFaSecret;
+
+    @JsonIgnore
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private RefreshToken refreshToken;
 
-    @Override public Collection<? extends GrantedAuthority> getAuthorities() {
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
         return Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 

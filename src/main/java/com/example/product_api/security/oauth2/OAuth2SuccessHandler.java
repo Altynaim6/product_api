@@ -66,24 +66,13 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         RefreshToken refreshToken = refreshTokenService.getOrCreateRefreshToken(user);
 
         // Redirect with tokens
-        String redirectUrl = String.format("/login.html?accessToken=%s&refreshToken=%s",
+        String redirectUrl = String.format("/home.html?accessToken=%s&refreshToken=%s",
                 URLEncoder.encode(accessToken, StandardCharsets.UTF_8),
                 URLEncoder.encode(refreshToken.getToken(), StandardCharsets.UTF_8)
         );
 
         response.sendRedirect(redirectUrl);
-    }
 
-    @Bean
-    public OAuth2AuthorizationRequestResolver customAuthorizationRequestResolver(ClientRegistrationRepository clients) {
-        DefaultOAuth2AuthorizationRequestResolver resolver =
-                new DefaultOAuth2AuthorizationRequestResolver(clients, "/oauth2/authorization");
-
-        resolver.setAuthorizationRequestCustomizer(customizer -> customizer
-                .additionalParameters(params -> params.put("prompt", "select_account"))
-        );
-
-        return resolver;
     }
 
 }

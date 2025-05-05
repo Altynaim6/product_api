@@ -61,11 +61,25 @@
     }
   }
 
+  function getQueryParam(param) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(param);
+  }
+
+  const accessFromUrl = getQueryParam("accessToken");
+  const refreshFromUrl = getQueryParam("refreshToken");
+
+  if (accessFromUrl && refreshFromUrl) {
+    localStorage.setItem("accessToken", accessFromUrl);
+    localStorage.setItem("refreshToken", refreshFromUrl);
+    window.location.href = "/home.html";  // clean the URL
+  }
+
   const accessToken = localStorage.getItem("accessToken");
   const refreshToken = localStorage.getItem("refreshToken");
 
   if (!accessToken || !refreshToken) {
-    window.location.href = "/login.html";  // Redirect if not logged in
+    window.location.href = "/login.html";
   } else {
     const payload = parseJwt(accessToken);
     const email = payload?.sub || "Unknown user";
